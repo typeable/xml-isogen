@@ -22,7 +22,7 @@ library
                        Data.THGen.XML
 
   build-depends:       QuickCheck >= 2.8
-                     , base >=4.8 && <4.9
+                     , base >=4.8 && <5
                      , dom-parser >= 0.0.1
                      , lens >= 4.13
                      , mtl >= 2.2

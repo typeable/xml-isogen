@@ -23,7 +23,7 @@ library
 
   build-depends:       QuickCheck >= 2.8
                      , base >=4.8 && <5
-                     , dom-parser >= 0.0.1
+                     , dom-parser >= 0.1.0
                      , lens >= 4.13
                      , mtl >= 2.2
                      , semigroups >= 0.18

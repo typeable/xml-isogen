@@ -1,0 +1,9 @@
+resolver: lts-6.27
+
+packages:
+- "."
+
+extra-deps:
+- dom-parser-2.0.0
+- type-fun-0.0.1
+- open-union-0.2.0.0

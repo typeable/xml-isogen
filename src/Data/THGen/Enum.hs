@@ -25,7 +25,7 @@ module Data.THGen.Enum
   ) where
 
 import           Control.Applicative
-import           Control.Lens (over, _head)
+import           Control.Lens (over, _head, (<&>))
 import           Control.Monad
 import qualified Data.Char as C
 import qualified Language.Haskell.TH as TH
@@ -62,11 +62,11 @@ mangleEnumConName
   . words
 
 enumGenerate :: EnumDesc -> TH.DecsQ
-enumGenerate (EnumDesc exh strName strVals') = do
+enumGenerate (EnumDesc exh strName strVals) = do
   let
     name       = TH.mkName strName
-    strVals    = map mangleEnumConName strVals'
-    vals       = map (\strVal -> TH.mkName (strName ++ strVal)) strVals
+    vals       = strVals <&> \strVal ->
+      TH.mkName (strName ++ mangleEnumConName strVal)
     unknownVal = TH.mkName ("Unknown" ++ strName)
   dataDecl <- do
     let

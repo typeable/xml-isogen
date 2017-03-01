@@ -432,7 +432,7 @@ isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
     [fromDomInst, toXmlInst, toXmlParentAttributesInst]
 
 mkElement :: (XW.ToXML a, ToXmlParentAttributes a) => X.Name -> a -> XW.XML
-mkElement name a = XW.elementA name (toXmlParentAttributes a) (XW.toXML a)
+mkElement name a = XW.elementA name (toXmlParentAttributes a) a
 
 distribPair :: Functor f => (a, f b) -> f (a, b)
 distribPair (a, fb) = (a,) <$> fb

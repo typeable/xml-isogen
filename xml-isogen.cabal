@@ -21,7 +21,7 @@ library
   exposed-modules:     Data.THGen.Enum
                        Data.THGen.XML
                        Text.XML.ParentAttributes
-
+  other-modules:       Data.THGen.Compat
   build-depends:       QuickCheck >= 2.8
                      , base >=4.8 && <5
                      , dom-parser >= 2.0.0

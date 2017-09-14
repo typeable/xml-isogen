@@ -127,6 +127,7 @@ import qualified Data.Char as C
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Maybe (maybeToList, mapMaybe)
 import           Data.String
+import           Data.THGen.Compat
 import           Data.THGen.Enum
 import qualified Data.Text as T
 import qualified Language.Haskell.TH as TH
@@ -329,7 +330,7 @@ isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
                 XmlFieldPluralRepeated   -> [t| [$fieldType] |]
                 XmlFieldPluralMultiplied -> [t| NonEmpty $fieldType |]
             in
-              TH.varStrictType fName (TH.strictType TH.isStrict fType)
+              varStrictType fName (strictType fType)
           IsoXmlDescRecordAttribute descAttribute ->
             let
               IsoXmlDescAttribute
@@ -339,11 +340,9 @@ isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
                 XmlAttributePluralMandatory -> attributeType
                 XmlAttributePluralOptional  -> [t| Maybe $attributeType |]
             in
-              TH.varStrictType fName (TH.strictType TH.isStrict fType)
-    TH.dataD
-      (return [])
+              varStrictType fName (strictType fType)
+    dataD
       name
-      []
       [TH.recC name fields]
       [''Eq, ''Show]
   lensDecls <- makeFieldOpticsForDec lensRules dataDecl

@@ -28,6 +28,7 @@ import           Control.Applicative
 import           Control.Lens (over, _head, (<&>))
 import           Control.Monad
 import qualified Data.Char as C
+import           Data.THGen.Compat
 import qualified Language.Haskell.TH as TH
 import qualified Test.QuickCheck as QC
 import qualified Text.Read as R
@@ -74,11 +75,9 @@ enumGenerate (EnumDesc exh strName strVals) = do
       unknownConstr = case exh of
         Exhaustive    -> []
         NonExhaustive ->
-          [TH.normalC unknownVal [TH.strictType TH.isStrict [t|String|]]]
-    TH.dataD
-      (return [])
+          [TH.normalC unknownVal [strictType [t|String|]]]
+    dataD
       name
-      []
       (constrs ++ unknownConstr)
       ([''Eq, ''Ord] ++ if (exh == Exhaustive) then [''Enum, ''Bounded] else [])
   showInstDecl <- do

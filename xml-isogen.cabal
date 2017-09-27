@@ -22,6 +22,9 @@ tested-with:         GHC == 7.10.3
 extra-source-files:  CHANGELOG.md
                    , README.md
 
+source-repository head
+  type:     git
+  location: git@github.com:typeable/xml-isogen.git
 
 library
   exposed-modules:     Data.THGen.Enum

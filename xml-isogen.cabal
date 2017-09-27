@@ -1,5 +1,5 @@
 name:                xml-isogen
-version:             0.1.0
+version:             0.2.0
 synopsis:            Generate XML-isomorphic types
 description:
     TemplateHaskell generators for XML-isomorphic data types, including

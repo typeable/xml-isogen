@@ -392,7 +392,8 @@ isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
             XmlFieldPluralMandatory  -> [e|id|]
             _                        -> [e|traverse|]
           exprFieldValue   = [e|$(TH.varE fName) $(TH.varE objName)|]
-          exprFieldRender  = [e|mkElement $exprFieldStrName|]
+          exprFieldRender  =
+            [e|(\a -> XW.elementA $exprFieldStrName (toXmlParentAttributes a) a)|]
         return [e|$exprForField $exprFieldRender $exprFieldValue|]
       toXmlExpr
         = TH.lamE [if null exprFields then TH.wildP else TH.varP objName]
@@ -433,9 +434,6 @@ isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
 
   return $ [dataDecl] ++ lensDecls ++
     [fromDomInst, toXmlInst, toXmlParentAttributesInst]
-
-mkElement :: (XW.ToXML a, ToXmlParentAttributes a) => X.Name -> a -> XW.XML
-mkElement name a = XW.elementA name (toXmlParentAttributes a) a
 
 distribPair :: Functor f => (a, f b) -> f (a, b)
 distribPair (a, fb) = (a,) <$> fb

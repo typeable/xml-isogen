@@ -422,7 +422,11 @@ isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
       toXmlParentAttributesExpr
         = TH.lamE [if null exprAttributes then TH.wildP else TH.varP objName]
         $ [e|mapMaybe distribPair $(TH.listE exprAttributes)|]
+#if __GLASGOW_HASKELL__ < 800
     TH.instanceD
+#else
+    TH.instanceWithOverlapD (Just TH.Overlapping)
+#endif
       (return [])
       [t|ToXmlParentAttributes $(TH.conT name)|]
       [funSimple 'toXmlParentAttributes toXmlParentAttributesExpr]

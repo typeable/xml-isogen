@@ -1,5 +1,5 @@
 name:                xml-isogen
-version:             0.2.0
+version:             0.2.1
 synopsis:            Generate XML-isomorphic types
 description:
     TemplateHaskell generators for XML-isomorphic data types, including
@@ -28,8 +28,8 @@ source-repository head
 
 library
   exposed-modules:     Data.THGen.Enum
-                       Data.THGen.XML
-                       Text.XML.ParentAttributes
+                     , Data.THGen.XML
+                     , Text.XML.ParentAttributes
   other-modules:       Data.THGen.Compat
   build-depends:       QuickCheck >= 2.8
                      , base >=4.8 && <5

@@ -44,6 +44,8 @@ instance Arbitrary XmlFoo where
   arbitrary = genericArbitrary
   shrink = genericShrink
 
+#if __GLASGOW_HASKELL__ < 800
 instance Arbitrary (NonEmpty XmlBar) where
   arbitrary = genericArbitrary
   shrink = genericShrink
+#endif

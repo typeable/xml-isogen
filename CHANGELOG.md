@@ -1,7 +1,7 @@
 0.2.1
 ------
 
-* Workaround bug in 8.2.1: attributes generation did not work on 8.2.1 only
+* Workaround for the GHC 8.2.1 attribute generation bug
 
 * Add tests checking run-time behaviour of generated code
 

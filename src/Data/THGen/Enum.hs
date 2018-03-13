@@ -25,13 +25,16 @@ module Data.THGen.Enum
   ) where
 
 import           Control.Applicative
+import           Control.DeepSeq
 import           Control.Lens (over, _head, (<&>))
 import           Control.Monad
 import qualified Data.Char as C
 import           Data.THGen.Compat
+import           GHC.Generics (Generic)
 import qualified Language.Haskell.TH as TH
 import qualified Test.QuickCheck as QC
 import qualified Text.Read as R
+
 
 data Exhaustiveness = Exhaustive | NonExhaustive
   deriving (Eq, Ord, Show)
@@ -79,7 +82,7 @@ enumGenerate (EnumDesc exh strName strVals) = do
     dataD
       name
       (constrs ++ unknownConstr)
-      ([''Eq, ''Ord] ++ if (exh == Exhaustive) then [''Enum, ''Bounded] else [])
+      ([''Eq, ''Ord, ''Generic] ++ if (exh == Exhaustive) then [''Enum, ''Bounded] else [])
   showInstDecl <- do
     unknownMatch <- case exh of
       Exhaustive    -> return []
@@ -126,4 +129,9 @@ enumGenerate (EnumDesc exh strName strVals) = do
       (return [])
       [t|QC.Arbitrary $(TH.conT name)|]
       [funSimple 'QC.arbitrary arbExpr]
-  return [dataDecl, readInstDecl, showInstDecl, arbInstance]
+  nfDataInst <- do
+    TH.instanceD
+      (return [])
+      [t|NFData $(TH.conT name)|]
+      []
+  return [dataDecl, readInstDecl, showInstDecl, arbInstance, nfDataInst]

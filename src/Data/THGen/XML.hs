@@ -347,21 +347,16 @@ isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
                 XmlAttributePluralOptional  -> [t| Maybe $attributeType |]
             in
               varStrictType fName (strictType fType)
-    dataD
-      name
-      [TH.recC name fields]
-      [''Eq, ''Show, ''Generic]
-  lensDecls <- makeFieldOpticsForDec lensRules dataDecl
+    if isNewtype
+    -- generate a newtype instead to do less allocations later
+    then newtypeD name (TH.recC name fields) [''Eq, ''Show, ''Generic]
+    else dataD name [TH.recC name fields] [''Eq, ''Show, ''Generic]
+  lensDecls <- makeFieldOpticsForDec lensRules termDecl
   nfDataInst <- do
     TH.instanceD
       (return [])
       [t|NFData $(TH.conT name)|]
       [ ]
-    if isNewtype
-    -- generate a newtype instead to do less allocations later
-    then newtypeD name (TH.recC name fields) [''Eq, ''Show]
-    else dataD name [TH.recC name fields] [''Eq, ''Show]
-  lensDecls <- makeFieldOpticsForDec lensRules termDecl
   fromDomInst <- do
     let
       exprHeader      = [e|pure $(TH.conE name)|]
@@ -449,7 +444,7 @@ isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
       [funSimple 'toXmlParentAttributes toXmlParentAttributesExpr]
 
   return $ [termDecl] ++ lensDecls ++
-    [fromDomInst, toXmlInst, toXmlParentAttributesInst]
+    [fromDomInst, toXmlInst, toXmlParentAttributesInst, nfDataInst]
 
 distribPair :: Functor f => (a, f b) -> f (a, b)
 distribPair (a, fb) = (a,) <$> fb

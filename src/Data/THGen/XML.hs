@@ -133,11 +133,13 @@ import           Data.THGen.Enum
 import qualified Data.Text as T
 import           GHC.Generics (Generic)
 import qualified Language.Haskell.TH as TH
+import qualified Language.Haskell.TH.Syntax as TH
 import           Prelude hiding ((+), (*))
 import qualified Text.XML as X
 import           Text.XML.DOM.Parser
 import           Text.XML.ParentAttributes
 import qualified Text.XML.Writer as XW
+
 
 data XmlFieldPlural
   = XmlFieldPluralMandatory  -- Occurs exactly 1 time (Identity)
@@ -231,7 +233,7 @@ infix 0 =:=
 instance Description PrefixName IsoXmlDescRecord where
   prefixName =:= descRecord =
     let descRecordParts = descRecord ^. _IsoXmlDescRecord
-    in isoXmlGenerateRecord prefixName (reverse descRecordParts)
+    in isoXmlGenerateDatatype prefixName (reverse descRecordParts)
 
 record :: IsoXmlDescRecord
 record = IsoXmlDescRecord []
@@ -310,14 +312,15 @@ isoXmlGenerateEnum (ExhaustivenessName strName' exh) enumCons = do
   return $ enumDecls ++ [toXmlInst, toXmlAttributeInst,
     fromDomInst, fromAttributeInst]
 
-isoXmlGenerateRecord :: PrefixName -> [IsoXmlDescRecordPart] -> TH.DecsQ
-isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
+isoXmlGenerateDatatype :: PrefixName -> [IsoXmlDescRecordPart] -> TH.DecsQ
+isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
   let
+    isNewtype     = length descRecordParts == 1
     strName       = "Xml" ++ strName'
     strPrefix     = "x" ++ strPrefix'
     name          = TH.mkName strName
     fieldName str = "_" ++ strPrefix ++ over _head C.toUpper str
-  dataDecl <- do
+  termDecl <- do
     let
       fields = do
         descRecordPart <- descRecordParts
@@ -331,8 +334,9 @@ isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
                 XmlFieldPluralOptional   -> [t| Maybe $fieldType |]
                 XmlFieldPluralRepeated   -> [t| [$fieldType] |]
                 XmlFieldPluralMultiplied -> [t| NonEmpty $fieldType |]
-            in
-              varStrictType fName (strictType fType)
+            in if isNewtype
+              then varStrictType fName (nonStrictType fType)
+              else varStrictType fName (strictType fType)
           IsoXmlDescRecordAttribute descAttribute ->
             let
               IsoXmlDescAttribute
@@ -343,11 +347,11 @@ isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
                 XmlAttributePluralOptional  -> [t| Maybe $attributeType |]
             in
               varStrictType fName (strictType fType)
-    dataD
-      name
-      [TH.recC name fields]
-      [''Eq, ''Show, ''Generic]
-  lensDecls <- makeFieldOpticsForDec lensRules dataDecl
+    if isNewtype
+    -- generate a newtype instead to do less allocations later
+    then newtypeD name (TH.recC name fields) [''Eq, ''Show, ''Generic]
+    else dataD name [TH.recC name fields] [''Eq, ''Show, ''Generic]
+  lensDecls <- makeFieldOpticsForDec lensRules termDecl
   nfDataInst <- do
     TH.instanceD
       (return [])
@@ -439,8 +443,8 @@ isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
       [t|ToXmlParentAttributes $(TH.conT name)|]
       [funSimple 'toXmlParentAttributes toXmlParentAttributesExpr]
 
-  return $ [dataDecl] ++ lensDecls ++
-    [fromDomInst, toXmlInst, toXmlParentAttributesInst]
+  return $ [termDecl] ++ lensDecls ++
+    [fromDomInst, toXmlInst, toXmlParentAttributesInst, nfDataInst]
 
 distribPair :: Functor f => (a, f b) -> f (a, b)
 distribPair (a, fb) = (a,) <$> fb

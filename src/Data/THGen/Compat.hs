@@ -2,6 +2,8 @@
 
 module Data.THGen.Compat
   ( dataD
+  , newtypeD
+  , nonStrictType
   , strictType
   , varStrictType
   ) where
@@ -19,6 +21,27 @@ dataD name cons derivs = TH.dataD (return []) name [] Nothing cons derivCls
     derivCls = traverse TH.conT derivs
 #else
 dataD name = TH.dataD (return []) name []
+#endif
+
+newtypeD :: TH.Name -> TH.ConQ -> [TH.Name] -> TH.DecQ
+#if MIN_VERSION_template_haskell(2,12,0)
+newtypeD name cons derivs = TH.newtypeD (return []) name [] Nothing cons [derivCls]
+  where
+    derivCls = TH.derivClause Nothing $ fmap TH.conT derivs
+#elif MIN_VERSION_template_haskell(2,11,0)
+newtypeD name cons derivs = TH.newtypeD (return []) name [] Nothing cons derivCls
+  where
+    derivCls = traverse TH.conT derivs
+#else
+newtypeD name = TH.newtypeD (return []) name []
+#endif
+
+#if MIN_VERSION_template_haskell(2,11,0)
+nonStrictType :: TH.TypeQ -> TH.BangTypeQ
+nonStrictType = TH.bangType (TH.bang TH.noSourceUnpackedness TH.noSourceStrictness)
+#else
+nonStrictType :: TH.TypeQ -> TH.StrictTypeQ
+nonStrictType = TH.strictType TH.notStrict
 #endif
 
 #if MIN_VERSION_template_haskell(2,11,0)

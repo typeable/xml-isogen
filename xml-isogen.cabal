@@ -34,6 +34,7 @@ library
   build-depends:       QuickCheck >= 2.8
                      , base >=4.8 && <5
                      , dom-parser >= 2.0.0
+                     , deepseq
                      , lens >= 4.13
                      , mtl >= 2.2
                      , semigroups >= 0.18
@@ -60,6 +61,7 @@ test-suite spec
   build-depends:      base
                     , QuickCheck
                     , data-default
+                    , deepseq
                     , dom-parser
                     , generic-arbitrary
                     , hspec

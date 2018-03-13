@@ -121,6 +121,7 @@ module Data.THGen.XML
   , Integer
   ) where
 
+import           Control.DeepSeq
 import           Control.Lens hiding (repeated, enum, (&))
 import           Control.Lens.Internal.FieldTH (makeFieldOpticsForDec)
 import qualified Data.Char as C
@@ -130,12 +131,13 @@ import           Data.String
 import           Data.THGen.Compat
 import           Data.THGen.Enum
 import qualified Data.Text as T
+import           GHC.Generics (Generic)
 import qualified Language.Haskell.TH as TH
 import           Prelude hiding ((+), (*))
+import qualified Text.XML as X
 import           Text.XML.DOM.Parser
 import           Text.XML.ParentAttributes
 import qualified Text.XML.Writer as XW
-import qualified Text.XML as X
 
 data XmlFieldPlural
   = XmlFieldPluralMandatory  -- Occurs exactly 1 time (Identity)
@@ -344,8 +346,13 @@ isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
     dataD
       name
       [TH.recC name fields]
-      [''Eq, ''Show]
+      [''Eq, ''Show, ''Generic]
   lensDecls <- makeFieldOpticsForDec lensRules dataDecl
+  nfDataInst <- do
+    TH.instanceD
+      (return [])
+      [t|NFData $(TH.conT name)|]
+      [ ]
   fromDomInst <- do
     let
       exprHeader      = [e|pure $(TH.conE name)|]

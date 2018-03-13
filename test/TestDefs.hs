@@ -6,7 +6,6 @@ module TestDefs where
 
 import Data.List.NonEmpty
 import Data.THGen.XML
-import GHC.Generics (Generic)
 import Test.QuickCheck.Arbitrary.Generic
 import Test.QuickCheck.Instances ()
 
@@ -32,13 +31,9 @@ import Test.QuickCheck.Instances ()
 "Root" =:= record
   ! "Foo"
 
-deriving instance Generic XmlRoot
-
 instance Arbitrary XmlRoot where
   arbitrary = genericArbitrary
   shrink = genericShrink
-
-deriving instance Generic XmlFoo
 
 instance Arbitrary XmlFoo where
   arbitrary = genericArbitrary

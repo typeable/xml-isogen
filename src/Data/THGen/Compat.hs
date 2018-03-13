@@ -38,7 +38,7 @@ newtypeD name = TH.newtypeD (return []) name []
 
 #if MIN_VERSION_template_haskell(2,11,0)
 nonStrictType :: TH.TypeQ -> TH.BangTypeQ
-nonStrictType = TH.bangType (TH.bang TH.noSourceUnpackedness TH.sourceLazy)
+nonStrictType = TH.bangType (TH.bang TH.noSourceUnpackedness TH.noSourceStrictness)
 #else
 nonStrictType :: TH.TypeQ -> TH.StrictTypeQ
 nonStrictType = TH.strictType TH.notStrict

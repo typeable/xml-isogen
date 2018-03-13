@@ -233,7 +233,7 @@ infix 0 =:=
 instance Description PrefixName IsoXmlDescRecord where
   prefixName =:= descRecord =
     let descRecordParts = descRecord ^. _IsoXmlDescRecord
-    in isoXmlGenerateRecord prefixName (reverse descRecordParts)
+    in isoXmlGenerateDatatype prefixName (reverse descRecordParts)
 
 record :: IsoXmlDescRecord
 record = IsoXmlDescRecord []
@@ -312,8 +312,8 @@ isoXmlGenerateEnum (ExhaustivenessName strName' exh) enumCons = do
   return $ enumDecls ++ [toXmlInst, toXmlAttributeInst,
     fromDomInst, fromAttributeInst]
 
-isoXmlGenerateRecord :: PrefixName -> [IsoXmlDescRecordPart] -> TH.DecsQ
-isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
+isoXmlGenerateDatatype :: PrefixName -> [IsoXmlDescRecordPart] -> TH.DecsQ
+isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
   let
     isNewtype     = length descRecordParts == 1
     strName       = "Xml" ++ strName'
@@ -347,7 +347,6 @@ isoXmlGenerateRecord (PrefixName strName' strPrefix') descRecordParts = do
                 XmlAttributePluralOptional  -> [t| Maybe $attributeType |]
             in
               varStrictType fName (strictType fType)
-<<<<<<< HEAD
     dataD
       name
       [TH.recC name fields]

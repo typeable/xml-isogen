@@ -1,8 +1,0 @@
-resolver: nightly-2017-09-14
-
-packages:
-- .
-
-extra-deps:
-- dom-parser-3.0.0
-- generic-arbitrary-0.1.0

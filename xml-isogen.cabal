@@ -18,7 +18,7 @@ cabal-version:       >=1.22
 homepage:            https://github.com/typeable/xml-isogen
 tested-with:         GHC == 7.10.3
                    , GHC == 8.0.2
-                   , GHC == 8.2.1
+                   , GHC == 8.2.2
 extra-source-files:  CHANGELOG.md
                    , README.md
 

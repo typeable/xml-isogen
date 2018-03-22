@@ -345,8 +345,9 @@ isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
               fType = case attributePlural of
                 XmlAttributePluralMandatory -> attributeType
                 XmlAttributePluralOptional  -> [t| Maybe $attributeType |]
-            in
-              varStrictType fName (strictType fType)
+            in if isNewtype
+              then varStrictType fName (nonStrictType fType)
+              else varStrictType fName (strictType fType)
     if isNewtype
     -- generate a newtype instead to do less allocations later
     then newtypeD name (TH.recC name fields) [''Eq, ''Show, ''Generic]

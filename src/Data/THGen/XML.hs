@@ -252,7 +252,7 @@ instance IsString (TH.TypeQ -> IsoXmlDescPreField) where
 instance IsString IsoXmlDescPreField where
   fromString name = IsoXmlDescPreField name ty
     where
-      ty = (TH.conT . TH.mkName) ("Xml" ++ over _head C.toUpper name)
+      ty = (TH.conT . TH.mkName) ("Xml" ++ over _head C.toUpper (xmlLocalName name))
 
 instance IsString (TH.TypeQ -> IsoXmlDescPreAttribute) where
   fromString = IsoXmlDescPreAttribute
@@ -327,7 +327,8 @@ isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
         return $ case descRecordPart of
           IsoXmlDescRecordField descField ->
             let
-              IsoXmlDescField fieldPlural fieldStrName fieldType = descField
+              IsoXmlDescField fieldPlural rawName fieldType = descField
+              fieldStrName = xmlLocalName rawName
               fName = TH.mkName (fieldName fieldStrName)
               fType = case fieldPlural of
                 XmlFieldPluralMandatory  -> fieldType
@@ -366,7 +367,8 @@ isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
         return $ case descRecordPart of
           IsoXmlDescRecordField descField ->
             let
-              IsoXmlDescField fieldPlural fieldStrName _ = descField
+              IsoXmlDescField fieldPlural rawName _ = descField
+              fieldStrName     = xmlLocalName rawName
               exprFieldStrName = TH.litE (TH.stringL fieldStrName)
               fieldParse       = case fieldPlural of
                 XmlFieldPluralMandatory  -> [e|inElem|]
@@ -393,13 +395,14 @@ isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
     let
       exprFields = do
         descRecordPart <- descRecordParts
-        IsoXmlDescField fieldPlural fieldStrName _ <-
+        IsoXmlDescField fieldPlural rawName _ <-
           maybeToList $ case descRecordPart of
             IsoXmlDescRecordField descField -> Just descField
             _                               -> Nothing
         let
+          fieldStrName     = xmlLocalName rawName
           fName            = TH.mkName (fieldName fieldStrName)
-          exprFieldStrName = TH.litE (TH.stringL fieldStrName)
+          exprFieldStrName = TH.litE (TH.stringL rawName)
           exprForField     = case fieldPlural of
             XmlFieldPluralMandatory  -> [e|id|]
             _                        -> [e|traverse|]
@@ -449,3 +452,10 @@ isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
 
 distribPair :: Functor f => (a, f b) -> f (a, b)
 distribPair (a, fb) = (a,) <$> fb
+
+-- | Get a local part of (possibly) fully qualified 'X.Name':
+--
+-- >>> xmlLocalName "{http://example.com/ns/my-namespace}my-name"
+-- "my-name"
+xmlLocalName :: String -> String
+xmlLocalName = T.unpack . X.nameLocalName . fromString

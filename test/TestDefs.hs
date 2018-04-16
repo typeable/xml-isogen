@@ -29,7 +29,7 @@ import Test.QuickCheck.Instances ()
   ?% "Muux" [t|XmlQuux|]
 
 "Root" =:= record
-  ! "Foo"
+  ! "{http://example.com/ns/my-namespace}Foo"
 
 instance Arbitrary XmlRoot where
   arbitrary = genericArbitrary

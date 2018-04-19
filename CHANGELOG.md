@@ -1,7 +1,12 @@
 HEAD
 ------
 
+0.3.0
+------
+
+* Add namespaces support
 * Builds with GHC 8.4
+* Derive NFData for all generated datatypes
 
 0.2.1
 ------

@@ -114,6 +114,7 @@ module Data.THGen.XML
   , (!%)
   , (?%)
   , (&)
+  , (^)
   , (=:=)
     -- Re-exports
   , T.Text
@@ -133,12 +134,12 @@ import           Data.THGen.Enum
 import qualified Data.Text as T
 import           GHC.Generics (Generic)
 import qualified Language.Haskell.TH as TH
-import qualified Language.Haskell.TH.Syntax as TH
-import           Prelude hiding ((+), (*))
+import           Prelude hiding ((+), (*), (^))
 import qualified Text.XML as X
-import           Text.XML.DOM.Parser
+import           Text.XML.DOM.Parser hiding (parseContent)
 import           Text.XML.ParentAttributes
 import qualified Text.XML.Writer as XW
+import Text.XML.DOM.Parser.Internal.Content
 
 
 data XmlFieldPlural
@@ -157,13 +158,18 @@ data IsoXmlDescPreField = IsoXmlDescPreField String TH.TypeQ
 
 data IsoXmlDescPreAttribute = IsoXmlDescPreAttribute String TH.TypeQ
 
+data IsoXmlDescPreContent = IsoXmlDescPreContent String TH.TypeQ
+
 data IsoXmlDescField = IsoXmlDescField XmlFieldPlural String TH.TypeQ
 
 data IsoXmlDescAttribute = IsoXmlDescAttribute XmlAttributePlural String TH.TypeQ
 
+data IsoXmlDescContent = IsoXmlDescContent String TH.TypeQ
+
 data IsoXmlDescRecordPart
   = IsoXmlDescRecordField IsoXmlDescField
   | IsoXmlDescRecordAttribute IsoXmlDescAttribute
+  | IsoXmlDescRecordContent IsoXmlDescContent
 
 newtype IsoXmlDescRecord = IsoXmlDescRecord [IsoXmlDescRecordPart]
 
@@ -199,6 +205,14 @@ appendAttribute plural xrec (IsoXmlDescPreAttribute name ty) =
   let xattribute = IsoXmlDescRecordAttribute $ IsoXmlDescAttribute plural name ty
   in over _IsoXmlDescRecord (xattribute:) xrec
 
+appendContent
+  :: IsoXmlDescRecord
+  -> IsoXmlDescPreContent
+  -> IsoXmlDescRecord
+appendContent xrec (IsoXmlDescPreContent name ty) =
+  let xcontent = IsoXmlDescRecordContent $ IsoXmlDescContent name ty
+  in over _IsoXmlDescRecord (xcontent:) xrec
+
 (!), (?), (*), (+) :: IsoXmlDescRecord -> IsoXmlDescPreField -> IsoXmlDescRecord
 (!) = appendField XmlFieldPluralMandatory
 (?) = appendField XmlFieldPluralOptional
@@ -209,12 +223,16 @@ appendAttribute plural xrec (IsoXmlDescPreAttribute name ty) =
 (!%) = appendAttribute XmlAttributePluralMandatory
 (?%) = appendAttribute XmlAttributePluralOptional
 
+(^) :: IsoXmlDescRecord -> IsoXmlDescPreContent -> IsoXmlDescRecord
+(^) = appendContent
+
 infixl 2 !
 infixl 2 ?
 infixl 2 *
 infixl 2 +
 infixl 2 !%
 infixl 2 ?%
+infixl 2 ^
 
 appendEnumCon :: IsoXmlDescEnum -> IsoXmlDescEnumCon -> IsoXmlDescEnum
 appendEnumCon xenum xenumcon =
@@ -257,8 +275,16 @@ instance IsString IsoXmlDescPreField where
 instance IsString (TH.TypeQ -> IsoXmlDescPreAttribute) where
   fromString = IsoXmlDescPreAttribute
 
+instance IsString (TH.TypeQ -> IsoXmlDescPreContent) where
+  fromString = IsoXmlDescPreContent
+
 instance IsString IsoXmlDescPreAttribute where
   fromString name = IsoXmlDescPreAttribute name ty
+    where
+      ty = (TH.conT . TH.mkName) ("Xml" ++ over _head C.toUpper name)
+
+instance IsString IsoXmlDescPreContent where
+  fromString name = IsoXmlDescPreContent name ty
     where
       ty = (TH.conT . TH.mkName) ("Xml" ++ over _head C.toUpper name)
 
@@ -349,6 +375,14 @@ isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
             in if isNewtype
               then varStrictType fName (nonStrictType fType)
               else varStrictType fName (strictType fType)
+          IsoXmlDescRecordContent descContent ->
+            let
+              IsoXmlDescContent contentStrName contentType = descContent
+              fName = TH.mkName (fieldName contentStrName)
+              fType = contentType
+            in if isNewtype
+              then varStrictType fName (nonStrictType fType)
+              else varStrictType fName (strictType fType)
     if isNewtype
     -- generate a newtype instead to do less allocations later
     then newtypeD name (TH.recC name fields) [''Eq, ''Show, ''Generic]
@@ -384,6 +418,7 @@ isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
                 XmlAttributePluralOptional  -> [e|parseAttributeMaybe|]
             in
               [e|$attributeParse $exprAttributeStrName fromAttribute|]
+          IsoXmlDescRecordContent _ -> [e|parseContent fromAttribute|]
       fromDomExpr = foldl (\e fe -> [e| $e <*> $fe |]) exprHeader exprRecordParts
     TH.instanceD
       (return [])
@@ -395,21 +430,27 @@ isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
     let
       exprFields = do
         descRecordPart <- descRecordParts
-        IsoXmlDescField fieldPlural rawName _ <-
-          maybeToList $ case descRecordPart of
-            IsoXmlDescRecordField descField -> Just descField
-            _                               -> Nothing
-        let
-          fieldStrName     = xmlLocalName rawName
-          fName            = TH.mkName (fieldName fieldStrName)
-          exprFieldStrName = TH.litE (TH.stringL rawName)
-          exprForField     = case fieldPlural of
-            XmlFieldPluralMandatory  -> [e|id|]
-            _                        -> [e|traverse|]
-          exprFieldValue   = [e|$(TH.varE fName) $(TH.varE objName)|]
-          exprFieldRender  =
-            [e|(\a -> XW.elementA $exprFieldStrName (toXmlParentAttributes a) a)|]
-        return [e|$exprForField $exprFieldRender $exprFieldValue|]
+        case descRecordPart of
+          IsoXmlDescRecordField (IsoXmlDescField fieldPlural rawName _) -> do
+            let
+              fieldStrName     = xmlLocalName rawName
+              fName            = TH.mkName (fieldName fieldStrName)
+              exprFieldStrName = TH.litE (TH.stringL rawName)
+              exprForField     = case fieldPlural of
+                XmlFieldPluralMandatory  -> [e|id|]
+                _                        -> [e|traverse|]
+              exprFieldValue   = [e|$(TH.varE fName) $(TH.varE objName)|]
+              exprFieldRender  =
+                [e|(\a ->
+                  XW.elementA $exprFieldStrName (toXmlParentAttributes a) a)|]
+            return [e|$exprForField $exprFieldRender $exprFieldValue|]
+          IsoXmlDescRecordContent (IsoXmlDescContent rawName _)     -> do
+            let
+              fieldStrName     = xmlLocalName rawName
+              fName            = TH.mkName (fieldName fieldStrName)
+              exprFieldValue   = [e|$(TH.varE fName) $(TH.varE objName)|]
+            return [e|XW.content . toXmlAttribute $ $exprFieldValue|]
+          _                         -> []
       toXmlExpr
         = TH.lamE [if null exprFields then TH.wildP else TH.varP objName]
         $ foldr (\fe e -> [e|$fe *> $e|]) [e|return ()|] exprFields

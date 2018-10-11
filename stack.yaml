@@ -1,4 +1,4 @@
-resolver: lts-6.35
+resolver: lts-10.0
 extra-deps:
 - dom-parser-3.0.0
 - generic-arbitrary-0.1.0

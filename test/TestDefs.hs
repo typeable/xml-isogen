@@ -4,7 +4,7 @@
 
 module TestDefs where
 
-import Data.List.NonEmpty
+-- import Data.List.NonEmpty
 import Data.THGen.XML
 import Test.QuickCheck.Arbitrary.Generic
 import Test.QuickCheck.Instances ()
@@ -23,6 +23,7 @@ import Test.QuickCheck.Instances ()
   & "US"
 
 "Foo" =:= record
+  ^ "Shmuux" [t|XmlQuux|]
   + "Bar"
   ? "Baz" [t|Text|]
   !% "Quux"

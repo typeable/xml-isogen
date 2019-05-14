@@ -6,7 +6,7 @@ env:
   - STACK_YAML=stack.yaml
   - STACK_YAML=ghc-802.yaml
   - STACK_YAML=ghc-822.yaml
-  - STACK_YAML=ghc-841.yaml
+  - STACK_YAML=ghc-844.yaml
 
 cache:
   directories:

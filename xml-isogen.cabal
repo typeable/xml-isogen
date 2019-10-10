@@ -30,6 +30,7 @@ source-repository head
 library
   exposed-modules:     Data.THGen.Enum
                      , Data.THGen.XML
+                     , Data.THGen.XML.Internal
                      , Text.XML.ParentAttributes
   other-modules:       Data.THGen.Compat
                      , Text.XML.DOM.Parser.Internal.Content

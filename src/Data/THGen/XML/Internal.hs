@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
@@ -22,6 +23,8 @@ import           Text.XML.DOM.Parser.Internal.Content
 import           Text.XML.ParentAttributes
 import qualified Text.XML.Writer as XW
 
+
+data GenType = Parser | Generator | Both
 
 data XmlFieldPlural
   = XmlFieldPluralMandatory  -- Occurs exactly 1 time (Identity)
@@ -52,7 +55,7 @@ data IsoXmlDescRecordPart
   | IsoXmlDescRecordAttribute IsoXmlDescAttribute
   | IsoXmlDescRecordContent IsoXmlDescContent
 
-newtype IsoXmlDescRecord = IsoXmlDescRecord [IsoXmlDescRecordPart]
+data IsoXmlDescRecord = IsoXmlDescRecord GenType [IsoXmlDescRecordPart]
 
 makePrisms ''IsoXmlDescRecord
 
@@ -64,7 +67,7 @@ newtype IsoXmlDescEnumCon
 instance IsString IsoXmlDescEnumCon where
   fromString = IsoXmlDescEnumCon
 
-data IsoXmlDescEnum = IsoXmlDescEnum [IsoXmlDescEnumCon]
+data IsoXmlDescEnum = IsoXmlDescEnum GenType [IsoXmlDescEnumCon]
 
 makePrisms ''IsoXmlDescEnum
 
@@ -73,26 +76,26 @@ appendField
   -> IsoXmlDescRecord
   -> IsoXmlDescPreField
   -> IsoXmlDescRecord
-appendField plural xrec (IsoXmlDescPreField name ty) =
+appendField plural (IsoXmlDescRecord genType fields) (IsoXmlDescPreField name ty) =
   let xfield = IsoXmlDescRecordField $ IsoXmlDescField plural name ty
-  in over _IsoXmlDescRecord (xfield:) xrec
+  in IsoXmlDescRecord genType (xfield:fields)
 
 appendAttribute
   :: XmlAttributePlural
   -> IsoXmlDescRecord
   -> IsoXmlDescPreAttribute
   -> IsoXmlDescRecord
-appendAttribute plural xrec (IsoXmlDescPreAttribute name ty) =
+appendAttribute plural (IsoXmlDescRecord genType fields) (IsoXmlDescPreAttribute name ty) =
   let xattribute = IsoXmlDescRecordAttribute $ IsoXmlDescAttribute plural name ty
-  in over _IsoXmlDescRecord (xattribute:) xrec
+  in IsoXmlDescRecord genType (xattribute:fields)
 
 appendContent
   :: IsoXmlDescRecord
   -> IsoXmlDescPreContent
   -> IsoXmlDescRecord
-appendContent xrec (IsoXmlDescPreContent name ty) =
+appendContent (IsoXmlDescRecord genType fields) (IsoXmlDescPreContent name ty) =
   let xcontent = IsoXmlDescRecordContent $ IsoXmlDescContent name ty
-  in over _IsoXmlDescRecord (xcontent:) xrec
+  in IsoXmlDescRecord genType (xcontent:fields)
 
 (!), (?), (*), (+) :: IsoXmlDescRecord -> IsoXmlDescPreField -> IsoXmlDescRecord
 (!) = appendField XmlFieldPluralMandatory
@@ -116,8 +119,8 @@ infixl 2 ?%
 infixl 2 ^
 
 appendEnumCon :: IsoXmlDescEnum -> IsoXmlDescEnumCon -> IsoXmlDescEnum
-appendEnumCon xenum xenumcon =
-  over _IsoXmlDescEnum (xenumcon:) xenum
+appendEnumCon (IsoXmlDescEnum genType enumCons) xenumcon =
+  IsoXmlDescEnum genType (xenumcon:enumCons)
 
 (&) :: IsoXmlDescEnum -> IsoXmlDescEnumCon -> IsoXmlDescEnum
 (&) = appendEnumCon
@@ -130,20 +133,18 @@ class Description name desc | desc -> name where
 infix 0 =:=
 
 instance Description PrefixName IsoXmlDescRecord where
-  prefixName =:= descRecord =
-    let descRecordParts = descRecord ^. _IsoXmlDescRecord
-    in isoXmlGenerateDatatype prefixName (reverse descRecordParts)
+  prefixName =:= (IsoXmlDescRecord genType descRecordParts) =
+    isoXmlGenerateDatatype genType prefixName (reverse descRecordParts)
 
-record :: IsoXmlDescRecord
-record = IsoXmlDescRecord []
+record :: GenType -> IsoXmlDescRecord
+record gt = IsoXmlDescRecord gt []
 
-enum :: IsoXmlDescEnum
-enum = IsoXmlDescEnum []
+enum :: GenType -> IsoXmlDescEnum
+enum gt = IsoXmlDescEnum gt []
 
 instance Description ExhaustivenessName IsoXmlDescEnum where
-  exhaustivenessName =:= descEnum =
-    let descEnumCons = descEnum ^. _IsoXmlDescEnum
-    in isoXmlGenerateEnum exhaustivenessName (reverse descEnumCons)
+  exhaustivenessName =:= (IsoXmlDescEnum genType descEnumCons) =
+    isoXmlGenerateEnum genType exhaustivenessName (reverse descEnumCons)
 
 instance IsString (TH.TypeQ -> IsoXmlDescPreField) where
   fromString = IsoXmlDescPreField
@@ -188,39 +189,57 @@ funSimple :: TH.Name -> TH.ExpQ -> TH.DecQ
 funSimple name body = TH.funD name [ TH.clause [] (TH.normalB body) [] ]
 
 isoXmlGenerateEnum
-  :: ExhaustivenessName -> [IsoXmlDescEnumCon] -> TH.DecsQ
-isoXmlGenerateEnum (ExhaustivenessName strName' exh) enumCons = do
+  :: GenType
+  -> ExhaustivenessName
+  -> [IsoXmlDescEnumCon]
+  -> TH.DecsQ
+isoXmlGenerateEnum genType (ExhaustivenessName strName' exh) enumCons = do
   let
     strName  = "Xml" ++ strName'
     strVals  = map unIsoXmlDescEnumCon enumCons
     enumDesc = EnumDesc exh strName strVals
     name     = TH.mkName strName
   enumDecls <- enumGenerate enumDesc
-  toXmlInst <- do
-    TH.instanceD
-      (return [])
-      [t|XW.ToXML $(TH.conT name)|]
-      [funSimple 'XW.toXML [e|XW.toXML . T.pack . show|]]
-  toXmlAttributeInst <- do
-    TH.instanceD
-      (return [])
-      [t|ToXmlAttribute $(TH.conT name)|]
-      [funSimple 'toXmlAttribute [e|T.pack . show|]]
-  fromDomInst <- do
-    TH.instanceD
-      (return [])
-      [t|FromDom $(TH.conT name)|]
-      [funSimple 'fromDom [e|parseContent readContent|]]
-  fromAttributeInst <- do
-    TH.instanceD
-      (return [])
-      [t|FromAttribute $(TH.conT name)|]
-      [funSimple 'fromAttribute [e|readContent|]]
-  return $ enumDecls ++ [toXmlInst, toXmlAttributeInst,
-    fromDomInst, fromAttributeInst]
+  let
+    genToXmlInst = do
+      TH.instanceD
+        (return [])
+        [t|XW.ToXML $(TH.conT name)|]
+        [funSimple 'XW.toXML [e|XW.toXML . T.pack . show|]]
+    genToXmlAttributeInst = do
+      TH.instanceD
+        (return [])
+        [t|ToXmlAttribute $(TH.conT name)|]
+        [funSimple 'toXmlAttribute [e|T.pack . show|]]
+    genFromDomInst = do
+      TH.instanceD
+        (return [])
+        [t|FromDom $(TH.conT name)|]
+        [funSimple 'fromDom [e|parseContent readContent|]]
+    genFromAttributeInst = do
+      TH.instanceD
+        (return [])
+        [t|FromAttribute $(TH.conT name)|]
+        [funSimple 'fromAttribute [e|readContent|]]
+  case genType of
+    Generator -> do
+      toXmlInst <- genToXmlInst
+      toXmlAttributeInst <- genToXmlAttributeInst
+      return $ enumDecls ++ [toXmlInst, toXmlAttributeInst]
+    Parser -> do
+      fromDomInst <- genFromDomInst
+      fromAttributeInst <- genFromAttributeInst
+      return $ enumDecls ++ [fromDomInst, fromAttributeInst]
+    Both -> do
+      toXmlInst <- genToXmlInst
+      toXmlAttributeInst <- genToXmlAttributeInst
+      fromDomInst <- genFromDomInst
+      fromAttributeInst <- genFromAttributeInst
+      return $ enumDecls ++ [toXmlInst, toXmlAttributeInst,
+        fromDomInst, fromAttributeInst]
 
-isoXmlGenerateDatatype :: PrefixName -> [IsoXmlDescRecordPart] -> TH.DecsQ
-isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
+isoXmlGenerateDatatype :: GenType -> PrefixName -> [IsoXmlDescRecordPart] -> TH.DecsQ
+isoXmlGenerateDatatype genType (PrefixName strName' strPrefix') descRecordParts = do
   let
     isNewtype     = length descRecordParts == 1
     strName       = "Xml" ++ strName'
@@ -274,103 +293,117 @@ isoXmlGenerateDatatype (PrefixName strName' strPrefix') descRecordParts = do
       (return [])
       [t|NFData $(TH.conT name)|]
       [ ]
-  fromDomInst <- do
-    let
-      exprHeader      = [e|pure $(TH.conE name)|]
-      exprRecordParts = do
-        descRecordPart <- descRecordParts
-        return $ case descRecordPart of
-          IsoXmlDescRecordField descField ->
-            let
-              IsoXmlDescField fieldPlural rawName _ = descField
-              fieldStrName     = xmlLocalName rawName
-              exprFieldStrName = TH.litE (TH.stringL fieldStrName)
-              fieldParse       = case fieldPlural of
-                XmlFieldPluralMandatory  -> [e|inElem|]
-                _                        -> [e|inElemTrav|]
-            in
-              [e|$fieldParse $exprFieldStrName fromDom|]
-          IsoXmlDescRecordAttribute descAttribute ->
-            let
-              IsoXmlDescAttribute attributePlural attributeStrName _ = descAttribute
-              exprAttributeStrName = TH.litE (TH.stringL attributeStrName)
-              attributeParse       = case attributePlural of
-                XmlAttributePluralMandatory -> [e|parseAttribute|]
-                XmlAttributePluralOptional  -> [e|parseAttributeMaybe|]
-            in
-              [e|$attributeParse $exprAttributeStrName fromAttribute|]
-          IsoXmlDescRecordContent _ -> [e|parseContent fromAttribute|]
-      fromDomExpr = foldl (\e fe -> [e| $e <*> $fe |]) exprHeader exprRecordParts
-    TH.instanceD
-      (return [])
-      [t|FromDom $(TH.conT name)|]
-      [ funSimple 'fromDom fromDomExpr ]
 
-  toXmlInst <- do
-    objName <- TH.newName strPrefix
-    let
-      exprFields = do
-        descRecordPart <- descRecordParts
-        case descRecordPart of
-          IsoXmlDescRecordField (IsoXmlDescField fieldPlural rawName _) -> do
-            let
-              fieldStrName     = xmlLocalName rawName
-              fName            = TH.mkName (fieldName fieldStrName)
-              exprFieldStrName = TH.litE (TH.stringL rawName)
-              exprForField     = case fieldPlural of
-                XmlFieldPluralMandatory  -> [e|id|]
-                _                        -> [e|traverse|]
-              exprFieldValue   = [e|$(TH.varE fName) $(TH.varE objName)|]
-              exprFieldRender  =
-                [e|(\a ->
-                  XW.elementA $exprFieldStrName (toXmlParentAttributes a) a)|]
-            return [e|$exprForField $exprFieldRender $exprFieldValue|]
-          IsoXmlDescRecordContent (IsoXmlDescContent rawName _)     -> do
-            let
-              fieldStrName     = xmlLocalName rawName
-              fName            = TH.mkName (fieldName fieldStrName)
-              exprFieldValue   = [e|$(TH.varE fName) $(TH.varE objName)|]
-            return [e|XW.content . toXmlAttribute $ $exprFieldValue|]
-          _                         -> []
-      toXmlExpr
-        = TH.lamE [if null exprFields then TH.wildP else TH.varP objName]
-        $ foldr (\fe e -> [e|$fe *> $e|]) [e|return ()|] exprFields
-    TH.instanceD
-      (return [])
-      [t|XW.ToXML $(TH.conT name)|]
-      [funSimple 'XW.toXML toXmlExpr]
+  let
+    genFromDomInst = do
+      let
+        exprHeader      = [e|pure $(TH.conE name)|]
+        exprRecordParts = do
+          descRecordPart <- descRecordParts
+          return $ case descRecordPart of
+            IsoXmlDescRecordField descField ->
+              let
+                IsoXmlDescField fieldPlural rawName _ = descField
+                fieldStrName     = xmlLocalName rawName
+                exprFieldStrName = TH.litE (TH.stringL fieldStrName)
+                fieldParse       = case fieldPlural of
+                  XmlFieldPluralMandatory  -> [e|inElem|]
+                  _                        -> [e|inElemTrav|]
+              in
+                [e|$fieldParse $exprFieldStrName fromDom|]
+            IsoXmlDescRecordAttribute descAttribute ->
+              let
+                IsoXmlDescAttribute attributePlural attributeStrName _ = descAttribute
+                exprAttributeStrName = TH.litE (TH.stringL attributeStrName)
+                attributeParse       = case attributePlural of
+                  XmlAttributePluralMandatory -> [e|parseAttribute|]
+                  XmlAttributePluralOptional  -> [e|parseAttributeMaybe|]
+              in
+                [e|$attributeParse $exprAttributeStrName fromAttribute|]
+            IsoXmlDescRecordContent _ -> [e|parseContent fromAttribute|]
+        fromDomExpr = foldl (\e fe -> [e| $e <*> $fe |]) exprHeader exprRecordParts
+      TH.instanceD
+        (return [])
+        [t|FromDom $(TH.conT name)|]
+        [ funSimple 'fromDom fromDomExpr ]
 
-  toXmlParentAttributesInst <- do
-    objName <- TH.newName strPrefix
-    let
-      exprAttributes            = do
-        descRecordPart <- descRecordParts
-        IsoXmlDescAttribute attributePlural attributeStrName _ <-
-          maybeToList $ case descRecordPart of
-            IsoXmlDescRecordAttribute descAttribute -> Just descAttribute
-            _                                       -> Nothing
-        let
-          fName           = TH.mkName (fieldName attributeStrName)
-          exprAttrStrName = TH.litE (TH.stringL attributeStrName)
-          exprAttrValue   = [e|$(TH.varE fName) $(TH.varE objName)|]
-          exprAttrWrap    = case attributePlural of
-            XmlAttributePluralMandatory -> [e|Just . toXmlAttribute|]
-            XmlAttributePluralOptional  -> [e|fmap toXmlAttribute|]
-        return [e|($exprAttrStrName, $exprAttrWrap $exprAttrValue)|]
-      toXmlParentAttributesExpr
-        = TH.lamE [if null exprAttributes then TH.wildP else TH.varP objName]
-        $ [e|mapMaybe distribPair $(TH.listE exprAttributes)|]
+    genToXmlInst = do
+      objName <- TH.newName strPrefix
+      let
+        exprFields = do
+          descRecordPart <- descRecordParts
+          case descRecordPart of
+            IsoXmlDescRecordField (IsoXmlDescField fieldPlural rawName _) -> do
+              let
+                fieldStrName     = xmlLocalName rawName
+                fName            = TH.mkName (fieldName fieldStrName)
+                exprFieldStrName = TH.litE (TH.stringL rawName)
+                exprForField     = case fieldPlural of
+                  XmlFieldPluralMandatory  -> [e|id|]
+                  _                        -> [e|traverse|]
+                exprFieldValue   = [e|$(TH.varE fName) $(TH.varE objName)|]
+                exprFieldRender  =
+                  [e|(\a ->
+                    XW.elementA $exprFieldStrName (toXmlParentAttributes a) a)|]
+              return [e|$exprForField $exprFieldRender $exprFieldValue|]
+            IsoXmlDescRecordContent (IsoXmlDescContent rawName _)     -> do
+              let
+                fieldStrName     = xmlLocalName rawName
+                fName            = TH.mkName (fieldName fieldStrName)
+                exprFieldValue   = [e|$(TH.varE fName) $(TH.varE objName)|]
+              return [e|XW.content . toXmlAttribute $ $exprFieldValue|]
+            _                         -> []
+        toXmlExpr
+          = TH.lamE [if null exprFields then TH.wildP else TH.varP objName]
+          $ foldr (\fe e -> [e|$fe *> $e|]) [e|return ()|] exprFields
+      TH.instanceD
+        (return [])
+        [t|XW.ToXML $(TH.conT name)|]
+        [funSimple 'XW.toXML toXmlExpr]
+    genToXmlParentAttributeInst = do
+      objName <- TH.newName strPrefix
+      let
+        exprAttributes            = do
+          descRecordPart <- descRecordParts
+          IsoXmlDescAttribute attributePlural attributeStrName _ <-
+            maybeToList $ case descRecordPart of
+              IsoXmlDescRecordAttribute descAttribute -> Just descAttribute
+              _                                       -> Nothing
+          let
+            fName           = TH.mkName (fieldName attributeStrName)
+            exprAttrStrName = TH.litE (TH.stringL attributeStrName)
+            exprAttrValue   = [e|$(TH.varE fName) $(TH.varE objName)|]
+            exprAttrWrap    = case attributePlural of
+              XmlAttributePluralMandatory -> [e|Just . toXmlAttribute|]
+              XmlAttributePluralOptional  -> [e|fmap toXmlAttribute|]
+          return [e|($exprAttrStrName, $exprAttrWrap $exprAttrValue)|]
+        toXmlParentAttributesExpr
+          = TH.lamE [if null exprAttributes then TH.wildP else TH.varP objName]
+          $ [e|mapMaybe distribPair $(TH.listE exprAttributes)|]
 #if __GLASGOW_HASKELL__ < 800
-    TH.instanceD
+      TH.instanceD
 #else
-    TH.instanceWithOverlapD (Just TH.Overlapping)
+      TH.instanceWithOverlapD (Just TH.Overlapping)
 #endif
-      (return [])
-      [t|ToXmlParentAttributes $(TH.conT name)|]
-      [funSimple 'toXmlParentAttributes toXmlParentAttributesExpr]
+        (return [])
+        [t|ToXmlParentAttributes $(TH.conT name)|]
+        [funSimple 'toXmlParentAttributes toXmlParentAttributesExpr]
 
-  return $ [termDecl] ++ lensDecls ++
-    [fromDomInst, toXmlInst, toXmlParentAttributesInst, nfDataInst]
+  case genType of
+    Generator -> do
+      toXmlInst <- genToXmlInst
+      toXmlParentAttributesInst <- genToXmlParentAttributeInst
+      return $ [termDecl] ++ lensDecls ++
+        [toXmlInst, toXmlParentAttributesInst, nfDataInst]
+    Parser -> do
+      fromDomInst <- genFromDomInst
+      return $ [termDecl] ++ lensDecls ++ [fromDomInst, nfDataInst]
+    Both -> do
+      toXmlInst <- genToXmlInst
+      toXmlParentAttributesInst <- genToXmlParentAttributeInst
+      fromDomInst <- genFromDomInst
+      return $ [termDecl] ++ lensDecls ++
+        [fromDomInst, toXmlInst, toXmlParentAttributesInst, nfDataInst]
 
 distribPair :: Functor f => (a, f b) -> f (a, b)
 distribPair (a, fb) = (a,) <$> fb

@@ -22,14 +22,14 @@ import Test.QuickCheck.Instances ()
   & "TO"
   & "US"
 
-"Foo" =:= record Both
+"Foo" =:= record Both NoLens
   ^ "Shmuux" [t|XmlQuux|]
   + "Bar"
   ? "Baz" [t|Text|]
   !% "Quux"
   ?% "Muux" [t|XmlQuux|]
 
-"Root" =:= record Both
+"Root" =:= record Both LensRename
   ! "{http://example.com/ns/my-namespace}Foo"
 
 instance Arbitrary XmlRoot where

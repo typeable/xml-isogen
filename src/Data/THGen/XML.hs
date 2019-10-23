@@ -40,7 +40,7 @@ to be either @R@, @G@ or @B@.
 
 Example 2.
 
-> "Message" =:= record Both
+> "Message" =:= record Both Lens
 >   ! "author"
 >   + "recipient"
 >   ? "message" [t|Text|]
@@ -78,8 +78,11 @@ the data type to be generated. The prefix for the record fields is
 inferred automatically by taking all of the uppercase letters in the
 name. You can override it manually like so:
 
-> "Reference" "ref" =:= record Parser
+> "Reference" "ref" =:= record Parser Lens
 >    ...
+
+Second argument to @record@ either enabled lens generation for records fields
+or disables it for use with DuplicateRecordFields and, possibly, generic-lens.
 
 To describe a record field you must supply its name as it appears
 in the XML tag, prefixed by its repetition kind:
@@ -93,7 +96,7 @@ The type of the field is inferred automatically from its name, so
 if the field is called @"author"@ its type will be @Author@. You can
 override the type by specifying it in quasiquotes like so:
 
-> "Message" =:= record Both
+> "Message" =:= record Both NoLens
 >   ! "author" [t|Person|].
 >   ...
 
@@ -109,6 +112,7 @@ module Data.THGen.XML
   , PrefixName(..)
   , ExhaustivenessName(..)
   , GenType(..)
+  , GenerateLens(..)
   , record
   , enum
   , (!)

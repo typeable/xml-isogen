@@ -24,9 +24,25 @@ import           Text.XML.ParentAttributes
 import qualified Text.XML.Writer as XW
 
 
+-- | Marks the type of code generation:
+-- Parser - generate only instances for xml parsing (@FromDom@)
+-- Generator - generate only @ToXML@ instances
+-- Both - generate @FromDom@ and @ToXML@ instances
 data GenType = Parser | Generator | Both
 
-data GenerateLens = Lens | NoLens
+{- | Marks the style of code generation regarding records fields
+@LensRenaming@ - fields get renamed by prefixing the field name with
+'_' and lowercased capital letter used in the type name.
+e.g. for
+
+> "MyNewDataType" =:= record genType LensRenaming
+>   * "field1"
+
+field will be renamed to `_mndtField1` and lens `mndtField1` will be created.
+
+@NoLens@ - no field renaming and no lens generation.
+-}
+data GenerateLens = LensRenaming | NoLens
 
 data XmlFieldPlural
   = XmlFieldPluralMandatory  -- Occurs exactly 1 time (Identity)
@@ -264,7 +280,9 @@ isoXmlGenerateDatatype
     strName       = "Xml" ++ strName'
     strPrefix     = "x" ++ strPrefix'
     name          = TH.mkName strName
-    fieldName str = "_" ++ strPrefix ++ over _head C.toUpper str
+    fieldName str = case generateLens of
+      LensRenaming -> "_" ++ strPrefix ++ over _head C.toUpper str
+      NoLens       -> str
   termDecl <- do
     let
       fields = do

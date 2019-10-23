@@ -24,10 +24,11 @@ import           Text.XML.ParentAttributes
 import qualified Text.XML.Writer as XW
 
 
--- | Marks the type of code generation:
--- Parser - generate only instances for xml parsing (@FromDom@)
--- Generator - generate only @ToXML@ instances
--- Both - generate @FromDom@ and @ToXML@ instances
+{- | Marks the type of code generation:
+@Parser@ - generate only instances for xml parsing (@FromDom@)
+@Generator@ - generate only @ToXML@ instances
+@Both@ - generate @FromDom@ and @ToXML@ instances
+-}
 data GenType = Parser | Generator | Both
 
 {- | Marks the style of code generation regarding records fields
@@ -324,7 +325,9 @@ isoXmlGenerateDatatype
     -- generate a newtype instead to do less allocations later
     then THC.newtypeD name (TH.recC name fields) [''Eq, ''Show, ''Generic]
     else THC.dataD name [TH.recC name fields] [''Eq, ''Show, ''Generic]
-  lensDecls <- makeFieldOpticsForDec lensRules termDecl
+  lensDecls <- case generateLens of
+    NoLens       -> pure []
+    LensRenaming -> makeFieldOpticsForDec lensRules termDecl
   nfDataInst <- do
     TH.instanceD
       (return [])

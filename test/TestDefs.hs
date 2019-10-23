@@ -23,13 +23,13 @@ import Test.QuickCheck.Instances ()
   & "US"
 
 "Foo" =:= record Both NoLens
-  ^ "Shmuux" [t|XmlQuux|]
-  + "Bar"
-  ? "Baz" [t|Text|]
-  !% "Quux"
-  ?% "Muux" [t|XmlQuux|]
+  ^ "shmuux" [t|XmlQuux|]
+  + "bar"
+  ? "baz" [t|Text|]
+  !% "quux"
+  ?% "muux" [t|XmlQuux|]
 
-"Root" =:= record Both LensRename
+"Root" =:= record Both LensRenaming
   ! "{http://example.com/ns/my-namespace}Foo"
 
 instance Arbitrary XmlRoot where

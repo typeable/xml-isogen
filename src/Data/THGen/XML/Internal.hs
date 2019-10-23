@@ -26,6 +26,8 @@ import qualified Text.XML.Writer as XW
 
 data GenType = Parser | Generator | Both
 
+data GenerateLens = Lens | NoLens
+
 data XmlFieldPlural
   = XmlFieldPluralMandatory  -- Occurs exactly 1 time (Identity)
   | XmlFieldPluralOptional   -- Occurs 0 or 1 times (Maybe)
@@ -55,7 +57,7 @@ data IsoXmlDescRecordPart
   | IsoXmlDescRecordAttribute IsoXmlDescAttribute
   | IsoXmlDescRecordContent IsoXmlDescContent
 
-data IsoXmlDescRecord = IsoXmlDescRecord GenType [IsoXmlDescRecordPart]
+data IsoXmlDescRecord = IsoXmlDescRecord GenType GenerateLens [IsoXmlDescRecordPart]
 
 makePrisms ''IsoXmlDescRecord
 
@@ -76,26 +78,34 @@ appendField
   -> IsoXmlDescRecord
   -> IsoXmlDescPreField
   -> IsoXmlDescRecord
-appendField plural (IsoXmlDescRecord genType fields) (IsoXmlDescPreField name ty) =
-  let xfield = IsoXmlDescRecordField $ IsoXmlDescField plural name ty
-  in IsoXmlDescRecord genType (xfield:fields)
+appendField
+  plural
+  (IsoXmlDescRecord genType generateLens fields)
+  (IsoXmlDescPreField name ty) =
+    let xfield = IsoXmlDescRecordField $ IsoXmlDescField plural name ty
+    in IsoXmlDescRecord genType generateLens (xfield:fields)
 
 appendAttribute
   :: XmlAttributePlural
   -> IsoXmlDescRecord
   -> IsoXmlDescPreAttribute
   -> IsoXmlDescRecord
-appendAttribute plural (IsoXmlDescRecord genType fields) (IsoXmlDescPreAttribute name ty) =
-  let xattribute = IsoXmlDescRecordAttribute $ IsoXmlDescAttribute plural name ty
-  in IsoXmlDescRecord genType (xattribute:fields)
+appendAttribute
+  plural
+  (IsoXmlDescRecord genType generateLens fields)
+  (IsoXmlDescPreAttribute name ty) =
+    let xattribute = IsoXmlDescRecordAttribute $ IsoXmlDescAttribute plural name ty
+    in IsoXmlDescRecord genType generateLens (xattribute:fields)
 
 appendContent
   :: IsoXmlDescRecord
   -> IsoXmlDescPreContent
   -> IsoXmlDescRecord
-appendContent (IsoXmlDescRecord genType fields) (IsoXmlDescPreContent name ty) =
-  let xcontent = IsoXmlDescRecordContent $ IsoXmlDescContent name ty
-  in IsoXmlDescRecord genType (xcontent:fields)
+appendContent
+  (IsoXmlDescRecord genType generateLens fields)
+  (IsoXmlDescPreContent name ty) =
+    let xcontent = IsoXmlDescRecordContent $ IsoXmlDescContent name ty
+    in IsoXmlDescRecord genType generateLens (xcontent:fields)
 
 (!), (?), (*), (+) :: IsoXmlDescRecord -> IsoXmlDescPreField -> IsoXmlDescRecord
 (!) = appendField XmlFieldPluralMandatory
@@ -133,11 +143,11 @@ class Description name desc | desc -> name where
 infix 0 =:=
 
 instance Description PrefixName IsoXmlDescRecord where
-  prefixName =:= (IsoXmlDescRecord genType descRecordParts) =
-    isoXmlGenerateDatatype genType prefixName (reverse descRecordParts)
+  prefixName =:= (IsoXmlDescRecord genType generateLens descRecordParts) =
+    isoXmlGenerateDatatype genType generateLens prefixName (reverse descRecordParts)
 
-record :: GenType -> IsoXmlDescRecord
-record gt = IsoXmlDescRecord gt []
+record :: GenType -> GenerateLens -> IsoXmlDescRecord
+record gt gl = IsoXmlDescRecord gt gl []
 
 enum :: GenType -> IsoXmlDescEnum
 enum gt = IsoXmlDescEnum gt []
@@ -238,8 +248,17 @@ isoXmlGenerateEnum genType (ExhaustivenessName strName' exh) enumCons = do
       return $ enumDecls ++ [toXmlInst, toXmlAttributeInst,
         fromDomInst, fromAttributeInst]
 
-isoXmlGenerateDatatype :: GenType -> PrefixName -> [IsoXmlDescRecordPart] -> TH.DecsQ
-isoXmlGenerateDatatype genType (PrefixName strName' strPrefix') descRecordParts = do
+isoXmlGenerateDatatype
+  :: GenType
+  -> GenerateLens
+  -> PrefixName
+  -> [IsoXmlDescRecordPart]
+  -> TH.DecsQ
+isoXmlGenerateDatatype
+  genType
+  generateLens
+  (PrefixName strName' strPrefix')
+  descRecordParts = do
   let
     isNewtype     = length descRecordParts == 1
     strName       = "Xml" ++ strName'

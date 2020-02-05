@@ -183,7 +183,7 @@ instance IsString ExhaustivenessName where
   fromString strName = ExhaustivenessName strName NonExhaustive
 
 makeNamePrefix :: String -> String
-makeNamePrefix = map C.toLower . filter C.isUpper
+makeNamePrefix = map C.toLower . filter (\c -> C.isUpper c || C.isDigit c)
 
 funSimple :: TH.Name -> TH.ExpQ -> TH.DecQ
 funSimple name body = TH.funD name [ TH.clause [] (TH.normalB body) [] ]

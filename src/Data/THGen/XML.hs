@@ -124,9 +124,11 @@ module Data.THGen.XML
   , Text
   , P.Int
   , P.Integer
+  , Nillable(..)
   ) where
 
 import           Data.THGen.Enum
+import           Data.THGen.Nillable
 import           Data.THGen.XML.Internal
 import           Data.Text
 import qualified Prelude as P

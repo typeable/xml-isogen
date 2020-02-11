@@ -33,6 +33,7 @@ library
                      , Data.THGen.XML.Internal
                      , Text.XML.ParentAttributes
   other-modules:       Data.THGen.Compat
+                     , Data.THGen.Orphans
                      , Text.XML.DOM.Parser.Internal.Content
   build-depends:       QuickCheck >= 2.8
                      , base >=4.8 && <5
@@ -45,6 +46,7 @@ library
                      , text >= 1.2
                      , xml-conduit >= 1.0
                      , xml-conduit-writer >= 0.1
+                     , scientific
 
   hs-source-dirs:      src
 

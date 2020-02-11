@@ -127,6 +127,7 @@ module Data.THGen.XML
   ) where
 
 import           Data.THGen.Enum
+import           Data.THGen.Orphans ()
 import           Data.THGen.XML.Internal
 import           Data.Text
 import qualified Prelude as P

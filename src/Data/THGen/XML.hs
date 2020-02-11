@@ -124,10 +124,12 @@ module Data.THGen.XML
   , Text
   , P.Int
   , P.Integer
+  , Nillable(..)
   ) where
 
 import           Data.THGen.Enum
 import           Data.THGen.Orphans ()
 import           Data.THGen.XML.Internal
 import           Data.Text
+import           Text.XML.Nillable
 import qualified Prelude as P

@@ -6,4 +6,4 @@ import           Data.Scientific
 import           Text.XML.Writer
 
 instance ToXML Scientific where
-  toXML = content . Text.pack . show
+  toXML = content . Text.pack . formatScientific Fixed Nothing

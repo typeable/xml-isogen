@@ -31,8 +31,8 @@ library
   exposed-modules:     Data.THGen.Enum
                      , Data.THGen.XML
                      , Data.THGen.XML.Internal
-                     , Data.THGen.Nillable
                      , Text.XML.ParentAttributes
+                     , Text.XML.Nillable
   other-modules:       Data.THGen.Compat
                      , Text.XML.DOM.Parser.Internal.Content
   build-depends:       QuickCheck >= 2.8

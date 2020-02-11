@@ -2,7 +2,7 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Data.THGen.Nillable
+module Text.XML.Nillable
 where
 
 import Control.DeepSeq
@@ -14,11 +14,7 @@ import Text.XML.ParentAttributes
 --
 -- Null value is indicated by "nil"="true" attribute.
 newtype Nillable a = Nillable (Maybe a)
-  deriving (Eq, Show, Ord, Read, NFData)
-
-instance ToXML a => ToXML (Nillable a) where
-  toXML (Nillable Nothing) = empty
-  toXML (Nillable (Just a)) = toXML a
+  deriving (Eq, Show, Ord, Read, NFData, ToXML)
 
 instance ToXmlParentAttributes a => ToXmlParentAttributes (Nillable a) where
   toXmlParentAttributes (Nillable Nothing) = 

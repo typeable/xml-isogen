@@ -266,7 +266,7 @@ omitting the element. (The `nil` attribute comes from `http://www.w3.org/2001/XM
   ! "field" [t|Nillable Text|]
 ```
 
-If the field contains `Nothing`, like this
+If the field contains the value `Nothing`, like this
 
 ```haskell
 XmlExample5 { _xe5Field = Nillable Nothing}

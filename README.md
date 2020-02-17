@@ -67,7 +67,7 @@ xpName :: lens-4.18.1:Control.Lens.Type.Lens' XmlPerson Text
 ```
 
 We have a data type `XmlPerson` with two fields and two lenses. Note that the
-fields have prefix built of underscore and all upper case characters
+fields have a prefix built of an underscore and all upper case characters
 and digits of the type name.
 
 

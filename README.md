@@ -127,7 +127,7 @@ instance FromDom XmlEmail where
 ### Enumerations
 
 Often XML element can contain only limited number of possible values. Lets define
-a type `Status` that can have on values `Active`, `Pending` or `Deleted`:
+a type `Status` that can have only values `Active`, `Pending` or `Deleted`:
 
 ```haskell
 "Status" =:= enum Both
@@ -181,7 +181,7 @@ into an XML element. For our case it may look like this:
 
 ### Attributes
 
-`xml-isogen` also supports attributes with the `!%` and `?%` modifiers:
+`xml-isogen` also supports XML attributes using `!%` and `?%` modifiers:
 
 ```haskell
 "Example3" =:= record Both
@@ -214,6 +214,9 @@ attached to parent XML element. Here is an example of the generated XML file:
     </field1>
 </root>
 ```
+
+Note that attributes are attached to the parent XML element, that's why we needed
+`XmlBody` type here.
 
 ### Namespaces
 
@@ -251,7 +254,7 @@ omitting the element. (The `nill` attribute comes from `http://www.w3.org/2001/X
   ! "field" [t|Nillable Text|]
 ```
 
-When the field has value `Nothing`, then the following XML will be generated:
+If the field has value `Nothing`, then the following XML will be generated:
 
 ```XML
 <field

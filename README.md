@@ -224,7 +224,7 @@ attached to parent XML element. Here is an example of the generated XML file:
 Note that attributes are attached to the parent XML element, that's why we needed
 `XmlBody` type here.
 
-And here is was you get after parsing the XML:
+And here is what you get after parsing the XML:
 
 ```haskell
 XmlExample3 {_xe3Field1 = "hello", _xe3Attribute1 = "world", _xe3Attribute2 = Nothing}

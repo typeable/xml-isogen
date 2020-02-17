@@ -67,7 +67,8 @@ xpName :: lens-4.18.1:Control.Lens.Type.Lens' XmlPerson Text
 ```
 
 We have a data type `XmlPerson` with two fields and two lenses. Note that the
-fields have prefix built of underscore and all upper cases on the type name.
+fields have prefix built of underscore and all upper case characters
+and digits of the type name.
 
 
 Lets take a closer look at `XmlPerson`:
@@ -104,12 +105,13 @@ Modifier | Description | Generated Type
 
 ### Supported types
 
-Fields in a record may have any type as long as it's has instances for `Eq`, `Show`,
-`NFData`, `FromDom` (for parser) and `ToXml` (for generator). Remember though that
-TemplateHaskell requires types to be available before they are used in a splice.
+Fields in a record may have any types as long as they are instances of `Eq`, `Show`,
+`NFData`, `FromDom` (for the parser) and `ToXml` (for the generator). Remember
+though that TemplateHaskell requires types to be available before they are used
+in a splice.
 
-You can omit field type altogether, in that case type will be assumed to be a
-capitalized field name with `Xml` prefix.
+You can omit field types altogether, in that case the type will be assumed to be a
+capitalized field name with an `Xml` prefix.
 It's your responsibility to make sure that type exists.
 Example:
 
@@ -150,8 +152,8 @@ It has all the necessary instances, so you can use it as a type for a field.
 
 ### Append content
 
-Sometimes XML you are dealing with contains a mix of elements and immediate content.
-Something like the following:
+Sometimes the XML you are dealing with contains a mix of elements and immediate
+content. Something like the following:
 
 ```XML
 <?xml version="1.0" encoding="UTF-8"?>
@@ -163,7 +165,6 @@ Something like the following:
     <field2>
         weird
     </field2>
-    LOL
 </example>
 ```
 
@@ -174,9 +175,14 @@ into an XML element. For our case it may look like this:
 ```haskell
 "Example2" =:= record Both
   ! "field1" [t|Text|]
-  ^ "mixed1" [t|Text|]
+  ^ "mixed" [t|Text|]
   ! "field2" [t|Text|]
-  ^ "mixed2" [t|Text|]
+```
+
+After parsing the XML above, we'll get the following:
+
+```haskell
+XmlExample2 {_xe2Field1 = "I am", _xe2Mixed = "totally", _xe2Field2 = "weird"}
 ```
 
 ### Attributes
@@ -218,6 +224,12 @@ attached to parent XML element. Here is an example of the generated XML file:
 Note that attributes are attached to the parent XML element, that's why we needed
 `XmlBody` type here.
 
+And here is was you get after parsing the XML:
+
+```haskell
+XmlExample3 {_xe3Field1 = "hello", _xe3Attribute1 = "world", _xe3Attribute2 = Nothing}
+```
+
 ### Namespaces
 
 Often XSD schema requires XML elements to be qualified with a namespace. To instruct
@@ -246,15 +258,21 @@ Here is the generated XML:
 
 ### Nillable types
 
-Sometimes optional element in XML are encoded using `nill="true"` attribute instead of
-omitting the element. (The `nill` attribute comes from `http://www.w3.org/2001/XMLSchema-instance` namespace). With `xml-isogen` you handle it using `Nillable` type:
+Sometimes optional element in XML are encoded using `nil="true"` attribute instead of
+omitting the element. (The `nil` attribute comes from `http://www.w3.org/2001/XMLSchema-instance` namespace). With `xml-isogen` you handle it using the `Nillable` type:
 
 ```haskell
 "Example5" =:= record Both
   ! "field" [t|Nillable Text|]
 ```
 
-If the field has value `Nothing`, then the following XML will be generated:
+If the field contains `Nothing`, like this
+
+```haskell
+XmlExample5 { _xe5Field = Nillable Nothing}
+```
+
+then the following XML will be generated:
 
 ```XML
 <field

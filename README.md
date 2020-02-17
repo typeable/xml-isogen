@@ -84,7 +84,11 @@ instance ToXML XmlPerson -- Defined at Tutorial.hs:13:1
 
 ```
 
-We have `FromDom` and `ToXML` instance generated for us. That's because
+We have
+[FromDom](https://hackage.haskell.org/package/dom-parser-3.1.0/docs/Text-XML-DOM-Parser-FromDom.html#t:FromDom)
+and
+[ToXML](https://hackage.haskell.org/package/xml-conduit-writer-0.1.1.2/docs/Text-XML-Writer.html#t:ToXML)
+instance generated for us. That's because
 we instructed `xml-isogen` to generate them using the `Both` noun. You can specify
 also `Parser` or `Generator` if you want only one of them.
 

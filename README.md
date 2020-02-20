@@ -6,4 +6,4 @@ TemplateHaskell generators for XML-isomorphic data types, including
 instances for parsing and rendering. A convenient DSL to define those
 types.
 
-This is similar to XSD but is Haskell-specific.
+Essentially it's a haskell DSL which allows its users to generate XML parsers and generators for haskell datatypes.

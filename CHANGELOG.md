@@ -1,7 +1,7 @@
 HEAD
 ------
 
-* Rename Both to ParserAndGenerator
+* Rename Both to ParserAndGenerator (#27)
 * Add Nillable newtype (#24)
 * Include digits in the auto-gerenated prefix (#22)
 

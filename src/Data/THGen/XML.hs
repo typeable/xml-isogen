@@ -22,7 +22,7 @@ wrapper around the field type:
 
 Example 1.
 
-> "Color" =:= enum Both
+> "Color" =:= enum ParserAndGenerator
 >   & "R"
 >   & "G"
 >   & "B"
@@ -40,7 +40,7 @@ to be either @R@, @G@ or @B@.
 
 Example 2.
 
-> "Message" =:= record Both
+> "Message" =:= record ParserAndGenerator
 >   ! "author"
 >   + "recipient"
 >   ? "message" [t|Text|]
@@ -93,7 +93,7 @@ The type of the field is inferred automatically from its name, so
 if the field is called @"author"@ its type will be @Author@. You can
 override the type by specifying it in quasiquotes like so:
 
-> "Message" =:= record Both
+> "Message" =:= record ParserAndGenerator
 >   ! "author" [t|Person|].
 >   ...
 

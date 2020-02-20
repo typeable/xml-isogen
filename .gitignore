@@ -3,3 +3,7 @@ dist
 .stack-work
 .cabal-sandbox/
 cabal.sandbox.config
+
+# vim backup and swap files
+*~
+.*.swp

@@ -49,7 +49,7 @@ Person has a name and an email, and email could be omitted. With `xml-isogen` it
 enough to write the following definition:
 
 ```haskell
-"Person" =:= record Both
+"Person" =:= record ParserAndGenerator
   ! "name" [t|Text|]
   ? "email" [t|Text|]
 ```
@@ -90,7 +90,7 @@ We have
 and
 [ToXML](https://hackage.haskell.org/package/xml-conduit-writer-0.1.1.2/docs/Text-XML-Writer.html#t:ToXML)
 instance generated for us. That's because
-we instructed `xml-isogen` to generate them using the `Both` noun. You can specify
+we instructed `xml-isogen` to generate them using the `ParserAndGenerator` noun. You can specify
 also `Parser` or `Generator` if you want only one of them.
 
 The `_xpEmail` field is optional; that's because we prefixed it with `?` modifier.
@@ -132,7 +132,7 @@ Often XML element can contain only limited number of possible values. Lets defin
 a type `Status` that can have only values `Active`, `Pending` or `Deleted`:
 
 ```haskell
-"Status" =:= enum Both
+"Status" =:= enum ParserAndGenerator
   & "Active"
   & "Pending"
   & "Deleted"
@@ -173,7 +173,7 @@ You can model this with an "append content" modifier `^`. It will instruct
 into an XML element. For our case it may look like this:
 
 ```haskell
-"Example2" =:= record Both
+"Example2" =:= record ParserAndGenerator
   ! "field1" [t|Text|]
   ^ "mixed" [t|Text|]
   ! "field2" [t|Text|]
@@ -190,12 +190,12 @@ XmlExample2 {_xe2Field1 = "I am", _xe2Mixed = "totally", _xe2Field2 = "weird"}
 `xml-isogen` also supports XML attributes using `!%` and `?%` modifiers:
 
 ```haskell
-"Example3" =:= record Both
+"Example3" =:= record ParserAndGenerator
   ! "field1" [t|Text|]
   !% "attribute1" [t|Text|]
   ?% "attribute2" [t|Text|]
 
-"Body" =:= record Both
+"Body" =:= record ParserAndGenerator
   ! "root" [t|XmlExample3|]
 ```
 
@@ -236,7 +236,7 @@ Often XSD schema requires XML elements to be qualified with a namespace. To inst
 `xml-isogen` to qualify fields, specify namespace is a curly brackets:
 
 ```haskell
-"Example4" =:= record Both
+"Example4" =:= record ParserAndGenerator
   ! "field1" [t|Text|]
   ! "{http://example.com/1}field2" [t|Text|]
   ! "{http://example.com/2}field3" [t|Text|]
@@ -262,7 +262,7 @@ Sometimes optional element in XML are encoded using `nil="true"` attribute inste
 omitting the element. (The `nil` attribute comes from `http://www.w3.org/2001/XMLSchema-instance` namespace). With `xml-isogen` you handle it using the `Nillable` type:
 
 ```haskell
-"Example5" =:= record Both
+"Example5" =:= record ParserAndGenerator
   ! "field" [t|Nillable Text|]
 ```
 

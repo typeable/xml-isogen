@@ -24,7 +24,7 @@ import           Text.XML.ParentAttributes
 import qualified Text.XML.Writer as XW
 
 
-data GenType = Parser | Generator | Both
+data GenType = Parser | Generator | ParserAndGenerator
 
 data XmlFieldPlural
   = XmlFieldPluralMandatory  -- Occurs exactly 1 time (Identity)
@@ -230,7 +230,7 @@ isoXmlGenerateEnum genType (ExhaustivenessName strName' exh) enumCons = do
       fromDomInst <- genFromDomInst
       fromAttributeInst <- genFromAttributeInst
       return $ enumDecls ++ [fromDomInst, fromAttributeInst]
-    Both -> do
+    ParserAndGenerator -> do
       toXmlInst <- genToXmlInst
       toXmlAttributeInst <- genToXmlAttributeInst
       fromDomInst <- genFromDomInst
@@ -398,7 +398,7 @@ isoXmlGenerateDatatype genType (PrefixName strName' strPrefix') descRecordParts 
     Parser -> do
       fromDomInst <- genFromDomInst
       return $ [termDecl] ++ lensDecls ++ [fromDomInst, nfDataInst]
-    Both -> do
+    ParserAndGenerator -> do
       toXmlInst <- genToXmlInst
       toXmlParentAttributesInst <- genToXmlParentAttributeInst
       fromDomInst <- genFromDomInst

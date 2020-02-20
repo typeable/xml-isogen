@@ -9,11 +9,11 @@ import Data.THGen.XML
 import Test.QuickCheck.Arbitrary.Generic
 import Test.QuickCheck.Instances ()
 
-"Bar" =:= enum Both
+"Bar" =:= enum ParserAndGenerator
   & "baroque"
   & "bartender"
 
-"Quux" Exhaustive =:= enum Both
+"Quux" Exhaustive =:= enum ParserAndGenerator
   & "ALL"
   & "YOUR"
   & "BASE"
@@ -22,14 +22,14 @@ import Test.QuickCheck.Instances ()
   & "TO"
   & "US"
 
-"Foo" =:= record Both
+"Foo" =:= record ParserAndGenerator
   ^ "Shmuux" [t|XmlQuux|]
   + "Bar"
   ? "Baz" [t|Text|]
   !% "Quux"
   ?% "Muux" [t|XmlQuux|]
 
-"Root" =:= record Both
+"Root" =:= record ParserAndGenerator
   ! "{http://example.com/ns/my-namespace}Foo"
 
 instance Arbitrary XmlRoot where

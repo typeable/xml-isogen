@@ -1,3 +1,7 @@
+nix:
+  packages:
+    - zlib
+
 resolver: lts-10.0
 extra-deps:
 - dom-parser-3.0.0

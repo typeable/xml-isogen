@@ -4,7 +4,7 @@ dist
 .cabal-sandbox/
 cabal.sandbox.config
 dist-newstyle/
-
+default.nix
 # vim backup and swap files
 *~
 .*.swp

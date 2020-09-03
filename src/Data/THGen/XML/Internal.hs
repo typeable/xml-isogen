@@ -5,7 +5,7 @@
 module Data.THGen.XML.Internal where
 
 import           Control.DeepSeq
-import           Control.Lens hiding (repeated, enum, (&))
+import           Control.Lens hiding (repeated, enum, (&), Strict)
 import           Control.Lens.Internal.FieldTH (makeFieldOpticsForDec)
 import qualified Data.Char as C
 import           Data.List.NonEmpty (NonEmpty)
@@ -15,7 +15,7 @@ import           Data.THGen.Compat as THC
 import           Data.THGen.Enum
 import qualified Data.Text as T
 import           GHC.Generics (Generic)
-import           Language.Haskell.TH as TH
+import           Language.Haskell.TH as TH hiding (Strict)
 import           Prelude hiding ((+), (*), (^))
 import qualified Text.XML as X
 import           Text.XML.DOM.Parser hiding (parseContent)
@@ -23,8 +23,22 @@ import           Text.XML.DOM.Parser.Internal.Content
 import           Text.XML.ParentAttributes
 import qualified Text.XML.Writer as XW
 
+data ParserMode
+  = Strict
+  | Lenient
 
-data GenType = Parser | Generator | ParserAndGenerator
+data GenType
+  = Parser
+  | Generator
+  | ParserAndGenerator
+  | LenientParser
+  | LenientParserAndGenerator
+
+isLenientType :: GenType -> Bool
+isLenientType = \case
+  LenientParser -> True
+  LenientParserAndGenerator -> True
+  _ -> False
 
 data XmlFieldPlural
   = XmlFieldPluralMandatory  -- Occurs exactly 1 time (Identity)
@@ -211,11 +225,14 @@ isoXmlGenerateEnum genType (ExhaustivenessName strName' exh) enumCons = do
         (return [])
         [t|ToXmlAttribute $(TH.conT name)|]
         [funSimple 'toXmlAttribute [e|T.pack . show|]]
-    genFromDomInst = do
+    genFromDomInst mode = do
       TH.instanceD
         (return [])
         [t|FromDom $(TH.conT name)|]
-        [funSimple 'fromDom [e|parseContent readContent|]]
+        [case mode of
+          Strict -> funSimple 'fromDom [e|parseContent readContent|]
+          Lenient -> funSimple 'fromDom [e|ignoreBlank $ parseContent readContent|]
+        ]
     genFromAttributeInst = do
       TH.instanceD
         (return [])
@@ -227,13 +244,24 @@ isoXmlGenerateEnum genType (ExhaustivenessName strName' exh) enumCons = do
       toXmlAttributeInst <- genToXmlAttributeInst
       return $ enumDecls ++ [toXmlInst, toXmlAttributeInst]
     Parser -> do
-      fromDomInst <- genFromDomInst
+      fromDomInst <- genFromDomInst Strict
+      fromAttributeInst <- genFromAttributeInst
+      return $ enumDecls ++ [fromDomInst, fromAttributeInst]
+    LenientParser -> do
+      fromDomInst <- genFromDomInst Lenient
       fromAttributeInst <- genFromAttributeInst
       return $ enumDecls ++ [fromDomInst, fromAttributeInst]
     ParserAndGenerator -> do
       toXmlInst <- genToXmlInst
       toXmlAttributeInst <- genToXmlAttributeInst
-      fromDomInst <- genFromDomInst
+      fromDomInst <- genFromDomInst Strict
+      fromAttributeInst <- genFromAttributeInst
+      return $ enumDecls ++ [toXmlInst, toXmlAttributeInst,
+        fromDomInst, fromAttributeInst]
+    LenientParserAndGenerator -> do
+      toXmlInst <- genToXmlInst
+      toXmlAttributeInst <- genToXmlAttributeInst
+      fromDomInst <- genFromDomInst Lenient
       fromAttributeInst <- genFromAttributeInst
       return $ enumDecls ++ [toXmlInst, toXmlAttributeInst,
         fromDomInst, fromAttributeInst]
@@ -256,11 +284,14 @@ isoXmlGenerateDatatype genType (PrefixName strName' strPrefix') descRecordParts 
               IsoXmlDescField fieldPlural rawName fieldType = descField
               fieldStrName = xmlLocalName rawName
               fName = TH.mkName (fieldName fieldStrName)
-              fType = case fieldPlural of
+              fType' = case fieldPlural of
                 XmlFieldPluralMandatory  -> fieldType
                 XmlFieldPluralOptional   -> [t| Maybe $fieldType |]
                 XmlFieldPluralRepeated   -> [t| [$fieldType] |]
                 XmlFieldPluralMultiplied -> [t| NonEmpty $fieldType |]
+              fType = if isLenientType genType
+                then [t| Maybe $fType' |]
+                else fType'
             in if isNewtype
               then THC.varStrictType fName (THC.nonStrictType fType)
               else THC.varStrictType fName (THC.strictType fType)
@@ -295,7 +326,7 @@ isoXmlGenerateDatatype genType (PrefixName strName' strPrefix') descRecordParts 
       [ ]
 
   let
-    genFromDomInst = do
+    genFromDomInst mode = do
       let
         exprHeader      = [e|pure $(TH.conE name)|]
         exprRecordParts = do
@@ -309,8 +340,9 @@ isoXmlGenerateDatatype genType (PrefixName strName' strPrefix') descRecordParts 
                 fieldParse       = case fieldPlural of
                   XmlFieldPluralMandatory  -> [e|inElem|]
                   _                        -> [e|inElemTrav|]
-              in
-                [e|$fieldParse $exprFieldStrName fromDom|]
+              in case mode of
+                Strict -> [e|$fieldParse $exprFieldStrName fromDom|]
+                Lenient -> [e|$fieldParse $exprFieldStrName (ignoreBlank fromDom)|]
             IsoXmlDescRecordAttribute descAttribute ->
               let
                 IsoXmlDescAttribute attributePlural attributeStrName _ = descAttribute
@@ -396,12 +428,21 @@ isoXmlGenerateDatatype genType (PrefixName strName' strPrefix') descRecordParts 
       return $ [termDecl] ++ lensDecls ++
         [toXmlInst, toXmlParentAttributesInst, nfDataInst]
     Parser -> do
-      fromDomInst <- genFromDomInst
+      fromDomInst <- genFromDomInst Strict
+      return $ [termDecl] ++ lensDecls ++ [fromDomInst, nfDataInst]
+    LenientParser -> do
+      fromDomInst <- genFromDomInst Lenient
       return $ [termDecl] ++ lensDecls ++ [fromDomInst, nfDataInst]
     ParserAndGenerator -> do
       toXmlInst <- genToXmlInst
       toXmlParentAttributesInst <- genToXmlParentAttributeInst
-      fromDomInst <- genFromDomInst
+      fromDomInst <- genFromDomInst Strict
+      return $ [termDecl] ++ lensDecls ++
+        [fromDomInst, toXmlInst, toXmlParentAttributesInst, nfDataInst]
+    LenientParserAndGenerator -> do
+      toXmlInst <- genToXmlInst
+      toXmlParentAttributesInst <- genToXmlParentAttributeInst
+      fromDomInst <- genFromDomInst Lenient
       return $ [termDecl] ++ lensDecls ++
         [fromDomInst, toXmlInst, toXmlParentAttributesInst, nfDataInst]
 

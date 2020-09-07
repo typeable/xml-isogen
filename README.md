@@ -280,3 +280,13 @@ then the following XML will be generated:
   ns:nil="true"
 />
 ```
+
+## Development
+
+To start working with `xml-isogen` using nix use:
+
+```
+nix-shell --packages cabal2nix --run "cabal2nix ." > default.nix
+nix-shell
+cabal v2-build
+```

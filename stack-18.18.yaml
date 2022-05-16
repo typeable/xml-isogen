@@ -6,6 +6,4 @@ resolver: lts-18.18
 extra-deps:
 - git: https://github.com/typeable/dom-parser.git
   commit: 7d556ba528bfa216e99714f8a0d4d00f452803a9
-
-- git: https://github.com/fumieval/xml-lens.git
-  commit: 4612e5ea18822baef678d7176c1ab5f93e4e31e9
+- xml-lens-0.3.1

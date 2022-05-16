@@ -160,7 +160,7 @@ instance Description ExhaustivenessName IsoXmlDescEnum where
   exhaustivenessName =:= (IsoXmlDescEnum genType descEnumCons) =
     isoXmlGenerateEnum genType exhaustivenessName (reverse descEnumCons)
 
-instance IsString (TH.TypeQ -> IsoXmlDescPreField) where
+instance (m ~ Q) => IsString (m TH.Type -> IsoXmlDescPreField) where
   fromString = IsoXmlDescPreField
 
 instance IsString IsoXmlDescPreField where
@@ -168,10 +168,10 @@ instance IsString IsoXmlDescPreField where
     where
       ty = (TH.conT . TH.mkName) ("Xml" ++ over _head C.toUpper (xmlLocalName name))
 
-instance IsString (TH.TypeQ -> IsoXmlDescPreAttribute) where
+instance (m ~ Q) => IsString (m TH.Type -> IsoXmlDescPreAttribute) where
   fromString = IsoXmlDescPreAttribute
 
-instance IsString (TH.TypeQ -> IsoXmlDescPreContent) where
+instance (m ~ Q) => IsString (m Type -> IsoXmlDescPreContent) where
   fromString = IsoXmlDescPreContent
 
 instance IsString IsoXmlDescPreAttribute where

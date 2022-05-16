@@ -2,7 +2,7 @@ nix:
   packages:
     - zlib
 
-resolver: lts-19.6
+resolver: lts-18.18
 extra-deps:
 - git: https://github.com/typeable/dom-parser.git
   commit: 7d556ba528bfa216e99714f8a0d4d00f452803a9

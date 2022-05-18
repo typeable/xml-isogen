@@ -42,12 +42,12 @@ library
                      , deepseq
                      , lens >= 4.13
                      , mtl >= 2.2
+                     , scientific
                      , semigroups >= 0.18
                      , template-haskell >= 2.10
                      , text >= 1.2
                      , xml-conduit >= 1.0
                      , xml-conduit-writer >= 0.1
-                     , scientific
 
   ghc-options:        -Wall
 
